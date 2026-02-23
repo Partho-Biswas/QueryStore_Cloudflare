@@ -4,30 +4,49 @@ import { jwt, sign, verify } from 'hono/jwt'
 import bcrypt from 'bcryptjs'
 import { MongoClient, ObjectId } from 'mongodb'
 
+// --- 2026 Cloudflare Socket Polyfill ---
+// This fixes the "socket.once is not a function" error
+import { Socket } from 'node:net'
+if (Socket && !Socket.prototype.once) {
+  Socket.prototype.once = function(event, listener) {
+    const wrapper = (...args) => {
+      this.removeListener(event, wrapper);
+      listener.apply(this, args);
+    };
+    return this.on(event, wrapper);
+  };
+}
+
 const app = new Hono().basePath('/api')
 
 // --- Database Helper ---
 let client
 async function getDb(env) {
   if (!client) {
-    if (!env.MONGO_URI) {
-      throw new Error('MONGO_URI environment variable is missing.');
-    }
-    client = new MongoClient(env.MONGO_URI)
+    if (!env.MONGO_URI) throw new Error('MONGO_URI is missing');
+    
+    // Optimized options for Cloudflare Workers
+    client = new MongoClient(env.MONGO_URI, {
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 1, // Workers should use small pools
+      minPoolSize: 0,
+      retryWrites: true,
+    })
     await client.connect()
   }
   return client.db()
 }
 
-// --- Health Check Endpoint ---
+// --- Health Check ---
 app.get('/health', async (c) => {
   try {
     const db = await getDb(c.env);
-    const collections = await db.listCollections().toArray();
-    return c.json({ status: 'ok', database: 'connected', collections: collections.length });
+    await db.command({ ping: 1 });
+    return c.json({ status: 'ok', message: 'Connected to MongoDB Atlas!' });
   } catch (err) {
     console.error('Health check failed:', err);
-    return c.json({ status: 'error', message: err.message, stack: err.stack }, 500);
+    return c.json({ status: 'error', message: err.message }, 500);
   }
 });
 
@@ -49,7 +68,6 @@ const authMiddleware = async (c, next) => {
 
 // --- Auth Endpoints ---
 
-// POST /signup
 app.post('/signup', async (c) => {
   const { username, password } = await c.req.json()
   if (!username || !password) return c.json({ message: 'Username and password are required.' }, 400)
@@ -67,7 +85,6 @@ app.post('/signup', async (c) => {
   return c.json({ message: 'User created successfully.' }, 201)
 })
 
-// POST /login
 app.post('/login', async (c) => {
   const { username, password } = await c.req.json()
   const db = await getDb(c.env)
@@ -90,7 +107,6 @@ app.post('/login', async (c) => {
 
 // --- Public Endpoints ---
 
-// GET /api/public/queries/:shareId
 app.get('/public/queries/:shareId', async (c) => {
   const shareId = c.req.param('shareId')
   const db = await getDb(c.env)
@@ -109,7 +125,6 @@ app.get('/public/queries/:shareId', async (c) => {
 
 // --- Protected Query Endpoints ---
 
-// GET /api/queries
 app.get('/queries', authMiddleware, async (c) => {
   const user = c.get('user')
   const db = await getDb(c.env)
@@ -119,7 +134,6 @@ app.get('/queries', authMiddleware, async (c) => {
   return c.json(result)
 })
 
-// GET /api/tags
 app.get('/tags', authMiddleware, async (c) => {
   const user = c.get('user')
   const db = await getDb(c.env)
@@ -136,7 +150,6 @@ app.get('/tags', authMiddleware, async (c) => {
   return c.json(tags.map(t => t.tag))
 })
 
-// POST /api/queries
 app.post('/queries', authMiddleware, async (c) => {
   const user = c.get('user')
   const { title, text, tags } = await c.req.json()
@@ -159,7 +172,6 @@ app.post('/queries', authMiddleware, async (c) => {
   return c.json({ ...newQuery, _id: result.insertedId }, 201)
 })
 
-// DELETE /api/queries/:id
 app.delete('/queries/:id', authMiddleware, async (c) => {
   const user = c.get('user')
   const id = c.req.param('id')
@@ -172,7 +184,6 @@ app.delete('/queries/:id', authMiddleware, async (c) => {
   return c.json({ message: 'Query deleted successfully.' })
 })
 
-// PUT /api/queries/:id
 app.put('/queries/:id', authMiddleware, async (c) => {
   const user = c.get('user')
   const id = c.req.param('id')
@@ -194,7 +205,6 @@ app.put('/queries/:id', authMiddleware, async (c) => {
   return c.json(result)
 })
 
-// POST /api/queries/:id/share
 app.post('/queries/:id/share', authMiddleware, async (c) => {
   const user = c.get('user')
   const id = c.req.param('id')
