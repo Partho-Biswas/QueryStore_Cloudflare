@@ -10,11 +10,26 @@ const app = new Hono().basePath('/api')
 let client
 async function getDb(env) {
   if (!client) {
+    if (!env.MONGO_URI) {
+      throw new Error('MONGO_URI environment variable is missing.');
+    }
     client = new MongoClient(env.MONGO_URI)
     await client.connect()
   }
   return client.db()
 }
+
+// --- Health Check Endpoint ---
+app.get('/health', async (c) => {
+  try {
+    const db = await getDb(c.env);
+    const collections = await db.listCollections().toArray();
+    return c.json({ status: 'ok', database: 'connected', collections: collections.length });
+  } catch (err) {
+    console.error('Health check failed:', err);
+    return c.json({ status: 'error', message: err.message, stack: err.stack }, 500);
+  }
+});
 
 // --- Auth Middleware ---
 const authMiddleware = async (c, next) => {
