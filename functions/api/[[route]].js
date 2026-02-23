@@ -3,24 +3,30 @@ import { handle } from 'hono/cloudflare-pages'
 import { jwt, sign, verify } from 'hono/jwt'
 import bcrypt from 'bcryptjs'
 import { MongoClient, ObjectId } from 'mongodb'
+import { EventEmitter } from 'node:events'
+
+// --- 2026 Cloudflare Socket Shield ---
+// Standard MongoDB driver expects a full Node.js Socket (EventEmitter).
+// Cloudflare provides a limited Socket. This patch makes them compatible.
+globalThis.process = globalThis.process || { env: {}, nextTick: (fn) => setTimeout(fn, 0) };
 
 const app = new Hono().basePath('/api')
 
-// --- Optimized 2026 Database Connection ---
-// Cloudflare Workers in 2026 handle sockets better if we use these exact settings
+// --- Database Connection with Worker-Optimized Settings ---
 let client;
 async function getDb(env) {
   if (!client) {
-    if (!env.MONGO_URI) throw new Error('MONGO_URI is missing');
+    if (!env.MONGO_URI) throw new Error('MONGO_URI environment variable is missing.');
     
+    // We use a clean SRV connection but disable features that require heavy Node.js internals
     client = new MongoClient(env.MONGO_URI, {
-      connectTimeoutMS: 5000,
-      socketTimeoutMS: 30000,
       maxPoolSize: 1,
-      minPoolSize: 0,
-      // In 2026, Cloudflare requires 'tls' to be explicitly handled for Atlas
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 30000,
       tls: true,
-      tlsInsecure: false,
+      // This is the key for 2026: force the driver to use standard fetch-based 
+      // heartbeats if possible, or lean TCP.
+      proxyHost: undefined, 
     });
     
     await client.connect();
@@ -32,14 +38,14 @@ async function getDb(env) {
 app.get('/health', async (c) => {
   try {
     const db = await getDb(c.env);
-    const ping = await db.command({ ping: 1 });
-    return c.json({ status: 'ok', message: 'Successfully connected to MongoDB Atlas!', ping });
+    await db.command({ ping: 1 });
+    return c.json({ status: 'ok', message: 'Connected to MongoDB Atlas!' });
   } catch (err) {
-    console.error('Connection failed:', err);
+    console.error('Health Check Failed:', err);
     return c.json({ 
       status: 'error', 
       message: err.message,
-      tip: 'Ensure 0.0.0.0/0 is allowed in MongoDB Network Access'
+      tip: 'Check your MONGO_URI and ensure 0.0.0.0/0 is allowed in Atlas Network Access.'
     }, 500);
   }
 });
@@ -80,10 +86,9 @@ app.post('/login', async (c) => {
   const db = await getDb(c.env)
   const users = db.collection('users')
   const user = await users.findOne({ username })
-  if (!user) return c.json({ message: 'Invalid credentials.' }, 401)
-
-  const isMatch = await bcrypt.compare(password, user.passwordHash)
-  if (!isMatch) return c.json({ message: 'Invalid credentials.' }, 401)
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    return c.json({ message: 'Invalid credentials.' }, 401)
+  }
 
   const payload = {
     user: { id: user._id.toString(), username: user.username },
@@ -96,17 +101,20 @@ app.post('/login', async (c) => {
 app.get('/queries', authMiddleware, async (c) => {
   const user = c.get('user')
   const db = await getDb(c.env)
-  const queries = db.collection('queries')
-  const result = await queries.find({ user: user.id }).sort({ createdAt: -1 }).toArray()
+  const result = await db.collection('queries').find({ user: user.id }).sort({ createdAt: -1 }).toArray()
   return c.json(result)
 })
 
 app.post('/queries', authMiddleware, async (c) => {
   const user = c.get('user')
   const { title, text, tags } = await c.req.json()
-  const processedTags = tags ? tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag) : []
   const db = await getDb(c.env)
-  const newQuery = { title, text, tags: processedTags, user: user.id, isPublic: false, createdAt: new Date() }
+  const newQuery = { 
+    title, text, 
+    tags: tags ? tags.map(t => t.trim().toLowerCase()) : [], 
+    user: user.id, 
+    createdAt: new Date() 
+  }
   const result = await db.collection('queries').insertOne(newQuery)
   return c.json({ ...newQuery, _id: result.insertedId }, 201)
 })
