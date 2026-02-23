@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                const signupResponse = await fetch('/signup', {
+                const signupResponse = await fetch('/api/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password }),
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Automatically log the user in after successful signup
-                const loginResponse = await fetch('/login', {
+                const loginResponse = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password }),
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                const response = await fetch('/login', {
+                const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password }),
