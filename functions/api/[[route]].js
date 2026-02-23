@@ -2,18 +2,27 @@ import { Hono } from 'hono'
 import { handle } from 'hono/cloudflare-pages'
 import { jwt, sign, verify } from 'hono/jwt'
 import bcrypt from 'bcryptjs'
-import { MongoClient, ObjectId } from 'mongodb'
 
 const app = new Hono().basePath('/api')
 
-// --- Database Helper ---
-let client
-async function getDb(env) {
-  if (!client) {
-    client = new MongoClient(env.MONGO_URI)
-    await client.connect()
-  }
-  return client.db()
+// --- Data API Helper ---
+async function atlasFetch(c, action, body) {
+  const url = `${c.env.MONGODB_API_URL}/action/${action}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Request-Headers': '*',
+      'api-key': c.env.MONGODB_API_KEY,
+    },
+    body: JSON.stringify({
+      collection: body.collection,
+      database: c.env.MONGODB_DATABASE,
+      dataSource: c.env.MONGODB_CLUSTER,
+      ...body,
+    }),
+  });
+  return response.json();
 }
 
 // --- Auth Middleware ---
@@ -34,38 +43,43 @@ const authMiddleware = async (c, next) => {
 
 // --- Auth Endpoints ---
 
-// POST /signup
 app.post('/signup', async (c) => {
   const { username, password } = await c.req.json()
   if (!username || !password) return c.json({ message: 'Username and password are required.' }, 400)
 
-  const db = await getDb(c.env)
-  const users = db.collection('users')
+  const existing = await atlasFetch(c, 'findOne', {
+    collection: 'users',
+    filter: { username }
+  });
 
-  const existingUser = await users.findOne({ username })
-  if (existingUser) return c.json({ message: 'Username already exists.' }, 409)
+  if (existing.document) return c.json({ message: 'Username already exists.' }, 409)
 
   const salt = await bcrypt.genSalt(10)
   const passwordHash = await bcrypt.hash(password, salt)
 
-  await users.insertOne({ username, passwordHash })
+  await atlasFetch(c, 'insertOne', {
+    collection: 'users',
+    document: { username, passwordHash }
+  });
+
   return c.json({ message: 'User created successfully.' }, 201)
 })
 
-// POST /login
 app.post('/login', async (c) => {
   const { username, password } = await c.req.json()
-  const db = await getDb(c.env)
-  const users = db.collection('users')
+  const result = await atlasFetch(c, 'findOne', {
+    collection: 'users',
+    filter: { username }
+  });
 
-  const user = await users.findOne({ username })
+  const user = result.document;
   if (!user) return c.json({ message: 'Invalid credentials.' }, 401)
 
   const isMatch = await bcrypt.compare(password, user.passwordHash)
   if (!isMatch) return c.json({ message: 'Invalid credentials.' }, 401)
 
   const payload = {
-    user: { id: user._id.toString(), username: user.username },
+    user: { id: user._id, username: user.username },
     exp: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour
   }
 
@@ -75,13 +89,14 @@ app.post('/login', async (c) => {
 
 // --- Public Endpoints ---
 
-// GET /api/public/queries/:shareId
 app.get('/public/queries/:shareId', async (c) => {
   const shareId = c.req.param('shareId')
-  const db = await getDb(c.env)
-  const queries = db.collection('queries')
+  const result = await atlasFetch(c, 'findOne', {
+    collection: 'queries',
+    filter: { shareId, isPublic: true }
+  });
 
-  const query = await queries.findOne({ shareId, isPublic: true })
+  const query = result.document;
   if (!query) return c.json({ message: 'Shared query not found.' }, 404)
 
   return c.json({
@@ -94,70 +109,67 @@ app.get('/public/queries/:shareId', async (c) => {
 
 // --- Protected Query Endpoints ---
 
-// GET /api/queries
 app.get('/queries', authMiddleware, async (c) => {
   const user = c.get('user')
-  const db = await getDb(c.env)
-  const queries = db.collection('queries')
-
-  const result = await queries.find({ user: user.id }).sort({ createdAt: -1 }).toArray()
-  return c.json(result)
+  const result = await atlasFetch(c, 'find', {
+    collection: 'queries',
+    filter: { user: user.id },
+    sort: { createdAt: -1 }
+  });
+  return c.json(result.documents)
 })
 
-// GET /api/tags
 app.get('/tags', authMiddleware, async (c) => {
   const user = c.get('user')
-  const db = await getDb(c.env)
-  const queries = db.collection('queries')
+  // Note: Data API doesn't support aggregate as easily in one call via find, 
+  // but we can fetch tags and process or use the 'aggregate' action.
+  const result = await atlasFetch(c, 'aggregate', {
+    collection: 'queries',
+    pipeline: [
+      { $match: { user: user.id } },
+      { $unwind: '$tags' },
+      { $group: { _id: '$tags' } },
+      { $sort: { _id: 1 } }
+    ]
+  });
 
-  const tags = await queries.aggregate([
-    { $match: { user: user.id } },
-    { $unwind: '$tags' },
-    { $group: { _id: '$tags' } },
-    { $sort: { _id: 1 } },
-    { $project: { _id: 0, tag: '$_id' } }
-  ]).toArray()
-
-  return c.json(tags.map(t => t.tag))
+  return c.json(result.documents.map(t => t._id))
 })
 
-// POST /api/queries
 app.post('/queries', authMiddleware, async (c) => {
   const user = c.get('user')
   const { title, text, tags } = await c.req.json()
   if (!title || !text) return c.json({ message: 'Title and text are required.' }, 400)
 
   const processedTags = tags ? tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag) : []
-  const db = await getDb(c.env)
-  const queries = db.collection('queries')
-
   const newQuery = {
     title,
     text,
     tags: processedTags,
     user: user.id,
     isPublic: false,
-    createdAt: new Date()
+    createdAt: { "$date": new Date().toISOString() }
   }
 
-  const result = await queries.insertOne(newQuery)
+  const result = await atlasFetch(c, 'insertOne', {
+    collection: 'queries',
+    document: newQuery
+  });
   return c.json({ ...newQuery, _id: result.insertedId }, 201)
 })
 
-// DELETE /api/queries/:id
 app.delete('/queries/:id', authMiddleware, async (c) => {
   const user = c.get('user')
   const id = c.req.param('id')
-  const db = await getDb(c.env)
-  const queries = db.collection('queries')
+  const result = await atlasFetch(c, 'deleteOne', {
+    collection: 'queries',
+    filter: { _id: { "$oid": id }, user: user.id }
+  });
 
-  const result = await queries.deleteOne({ _id: new ObjectId(id), user: user.id })
   if (result.deletedCount === 0) return c.json({ message: 'Query not found or unauthorized.' }, 404)
-
   return c.json({ message: 'Query deleted successfully.' })
 })
 
-// PUT /api/queries/:id
 app.put('/queries/:id', authMiddleware, async (c) => {
   const user = c.get('user')
   const id = c.req.param('id')
@@ -166,36 +178,37 @@ app.put('/queries/:id', authMiddleware, async (c) => {
   if (!title || !text) return c.json({ message: 'Title and text are required.' }, 400)
 
   const processedTags = tags ? tags.map(tag => tag.trim().toLowerCase()).filter(tag => tag) : []
-  const db = await getDb(c.env)
-  const queries = db.collection('queries')
+  const result = await atlasFetch(c, 'findOneAndUpdate', {
+    collection: 'queries',
+    filter: { _id: { "$oid": id }, user: user.id },
+    update: { $set: { title, text, tags: processedTags } },
+    returnDocument: 'after'
+  });
 
-  const result = await queries.findOneAndUpdate(
-    { _id: new ObjectId(id), user: user.id },
-    { $set: { title, text, tags: processedTags } },
-    { returnDocument: 'after' }
-  )
-
-  if (!result) return c.json({ message: 'Query not found or unauthorized.' }, 404)
-  return c.json(result)
+  if (!result.document) return c.json({ message: 'Query not found or unauthorized.' }, 404)
+  return c.json(result.document)
 })
 
-// POST /api/queries/:id/share
 app.post('/queries/:id/share', authMiddleware, async (c) => {
   const user = c.get('user')
   const id = c.req.param('id')
-  const db = await getDb(c.env)
-  const queries = db.collection('queries')
+  
+  const findResult = await atlasFetch(c, 'findOne', {
+    collection: 'queries',
+    filter: { _id: { "$oid": id }, user: user.id }
+  });
 
-  const query = await queries.findOne({ _id: new ObjectId(id), user: user.id })
+  const query = findResult.document;
   if (!query) return c.json({ message: 'Query not found or unauthorized.' }, 404)
 
   if (query.isPublic && query.shareId) return c.json({ shareId: query.shareId })
 
   const shareId = crypto.randomUUID().replace(/-/g, '').slice(0, 24)
-  await queries.updateOne(
-    { _id: query._id },
-    { $set: { shareId, isPublic: true } }
-  )
+  await atlasFetch(c, 'updateOne', {
+    collection: 'queries',
+    filter: { _id: { "$oid": id } },
+    update: { $set: { shareId, isPublic: true } }
+  });
 
   return c.json({ shareId })
 })
