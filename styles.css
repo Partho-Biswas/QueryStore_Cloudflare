@@ -1,0 +1,172 @@
+body {
+    background: linear-gradient(to left top, #1a2a3a, #2c3e50, #34495e, #4a5c6e); /* 4-color dark gradient background */
+    color: #ecf0f1; /* Light text color */
+    min-height: 100vh; /* Ensure background covers full viewport height */
+}
+
+/* Navbar adjustments for dark theme */
+.navbar {
+    background-color: #212529 !important; /* Deeper dark background for navbar */
+    border-bottom: 1px solid #343a40;
+}
+.navbar-brand {
+    color: #ecf0f1 !important;
+}
+.navbar-brand .bi {
+    color: #0d6efd; /* Bootstrap primary blue for icon */
+}
+
+/* Card styling for dark theme */
+.card {
+    background-color: #34495e; /* Darker background for cards */
+    color: #ecf0f1;
+    border: 1px solid #2c3e50;
+}
+.card-title {
+    color: #ecf0f1;
+}
+
+/* Form element styling */
+input::placeholder,
+textarea::placeholder,
+.form-control::placeholder {
+    color: #9aa0a6; /* Custom placeholder color */
+}
+.form-label {
+    color: #ecf0f1;
+}
+.form-control {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    border-color: #495057;
+}
+.form-control:focus {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    border-color: #0d6efd; /* Focus highlight */
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+textarea.form-control {
+    resize: vertical;
+}
+
+/* List group for queries */
+.list-group-item {
+    background-color: #34495e;
+    color: #ecf0f1;
+    border-color: #2c3e50;
+    margin-bottom: 5px; /* Space between items */
+    border-radius: 0.25rem; /* Rounded corners */
+}
+.list-group-item pre code {
+    color: #a0d468; /* Greenish for code snippets */
+}
+.query-content {
+    background-color: #2c3e50 !important; /* Darker background for query code block */
+    border-color: #495057 !important;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+.btn-outline-light {
+    color: #ecf0f1;
+    border-color: #ecf0f1;
+}
+.btn-outline-light:hover {
+    background-color: #ecf0f1;
+    color: #212529;
+}
+.btn-outline-secondary {
+    color: #c6d7e7;
+    border-color: #6c757d;
+    background: #304b63;
+}
+.btn-outline-secondary:hover {
+    background-color: #005eb2;
+    color: #ecf0f1;
+}
+.btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: #ecf0f1;
+}
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+/* Welcome message badge */
+#welcome-message.badge {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+/* Search box specific styling */
+#search-box {
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    border-color: #495057;
+}
+
+/* Authentication page specific styles */
+.auth-container {
+    max-width: 450px; /* Slightly wider for better form appearance */
+}
+.auth-container .card {
+    background-color: #34495e; /* Dark card background */
+    border: 1px solid #2c3e50;
+}
+.auth-container .nav-pills .nav-link {
+    color: #bdc3c7; /* Lighter grey for inactive tabs */
+    background-color: #2c3e50; /* Darker background for inactive pills */
+    border: 1px solid #2c3e50;
+}
+.auth-container .nav-pills .nav-link.active {
+    color: #ecf0f1;
+    background-color: #0d6efd; /* Primary color for active tab */
+    border-color: #0d6efd;
+}
+.auth-container .nav-pills .nav-link:hover:not(.active) {
+    background-color: #3e536e; /* Slightly lighter on hover */
+    color: #ecf0f1;
+}
+.form-switch-link {
+    color: #0d6efd !important;
+}
+
+/* Error messages */
+.text-danger {
+    color: #dc3545 !important;
+}
+.text-muted {
+    color: #95a5a6 !important; /* Lighter mute text */
+}
+
+/* Adjust pre and code styling for better visibility in dark theme */
+pre {
+    background-color: #23272b;
+    color: #e8e8e8;
+    border: 1px solid #444;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+code {
+    color: #a0d468; /* Greenish for code */
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+}
+
