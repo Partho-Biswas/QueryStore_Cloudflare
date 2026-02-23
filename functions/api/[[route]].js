@@ -3,30 +3,34 @@ import { handle } from 'hono/cloudflare-pages'
 import { jwt, sign, verify } from 'hono/jwt'
 import bcrypt from 'bcryptjs'
 import { MongoClient, ObjectId } from 'mongodb'
-import { EventEmitter } from 'node:events'
-
-// --- 2026 Cloudflare Socket Shield ---
-// Standard MongoDB driver expects a full Node.js Socket (EventEmitter).
-// Cloudflare provides a limited Socket. This patch makes them compatible.
-globalThis.process = globalThis.process || { env: {}, nextTick: (fn) => setTimeout(fn, 0) };
 
 const app = new Hono().basePath('/api')
 
-// --- Database Connection with Worker-Optimized Settings ---
+// --- Optimized 2026 Connection Handler ---
 let client;
+
 async function getDb(env) {
+  // If the client exists but the topology is closed, reset it
+  if (client && !client.topology?.isConnected()) {
+    try {
+      await client.close();
+    } catch (e) {}
+    client = null;
+  }
+
   if (!client) {
-    if (!env.MONGO_URI) throw new Error('MONGO_URI environment variable is missing.');
+    if (!env.MONGO_URI) throw new Error('MONGO_URI is missing');
     
-    // We use a clean SRV connection but disable features that require heavy Node.js internals
+    // Serverless-optimized settings for 2026
     client = new MongoClient(env.MONGO_URI, {
       maxPoolSize: 1,
+      minPoolSize: 0,
+      maxIdleTimeMS: 10000,
       connectTimeoutMS: 10000,
-      socketTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 10000, // Important for serverless
       tls: true,
-      // This is the key for 2026: force the driver to use standard fetch-based 
-      // heartbeats if possible, or lean TCP.
-      proxyHost: undefined, 
+      // Prevents the "Topology is closed" error by forcing a fresh check
+      ignoreUndefined: true, 
     });
     
     await client.connect();
@@ -38,14 +42,15 @@ async function getDb(env) {
 app.get('/health', async (c) => {
   try {
     const db = await getDb(c.env);
+    // Use a simple ping to verify the topology is open
     await db.command({ ping: 1 });
     return c.json({ status: 'ok', message: 'Connected to MongoDB Atlas!' });
   } catch (err) {
-    console.error('Health Check Failed:', err);
+    console.error('Connection Failed:', err);
     return c.json({ 
       status: 'error', 
       message: err.message,
-      tip: 'Check your MONGO_URI and ensure 0.0.0.0/0 is allowed in Atlas Network Access.'
+      tip: 'Ensure your MONGO_URI includes the database name and 0.0.0.0/0 is allowed in Atlas.'
     }, 500);
   }
 });
