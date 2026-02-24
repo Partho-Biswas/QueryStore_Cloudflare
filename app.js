@@ -61,7 +61,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const response = await fetch(`${API_URL}/queries`, { headers: authHeaders });
             if (response.status === 401) {
-                alert('Session expired or unauthorized. Please log in again.');
+                const errorData = await response.json().catch(() => ({ error: 'Unknown 401 error' }));
+                console.error('Auth Error Details:', errorData);
+                alert(`Session expired: ${errorData.error || 'Please log in again.'}`);
                 localStorage.clear();
                 window.location.href = 'auth.html';
                 return;
