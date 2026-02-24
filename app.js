@@ -61,8 +61,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const response = await fetch(`${API_URL}/queries`, { headers: authHeaders });
             if (response.status === 401) {
+                alert('Session expired or unauthorized. Please log in again.');
                 localStorage.clear();
                 window.location.href = 'auth.html';
+                return;
             }
             if (!response.ok) throw new Error('Failed to fetch queries.');
             allQueries = await response.json();
