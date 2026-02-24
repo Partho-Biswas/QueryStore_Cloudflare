@@ -1,5 +1,9 @@
-
-.env
-node_modules
-ToDo
 /nbproject/private/
+node_modules/
+.wrangler/
+.env
+queries_atlas.json
+users_atlas.json
+migration.sql
+migrate.js
+migrate.py

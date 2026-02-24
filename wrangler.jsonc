@@ -4,6 +4,13 @@
   "compatibility_date": "2026-02-01",
   "compatibility_flags": ["nodejs_compat_v2"],
   "pages_build_output_dir": ".",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "querystore-db",
+      "database_id": "9804343b-51ee-46df-9a68-f7c9d18a0e26"
+    }
+  ],
   "observability": {
     "enabled": true
   }
