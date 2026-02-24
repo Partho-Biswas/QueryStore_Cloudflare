@@ -53,7 +53,7 @@ app.post('/login', async (c) => {
     user: { id: user.id, username: user.username },
     exp: Math.floor(Date.now() / 1000) + 60 * 60,
   }
-  const token = await sign(payload, c.env.JWT_SECRET)
+  const token = await sign(payload, c.env.JWT_SECRET, 'HS256')
   return c.json({ token, user: { username: user.username } })
 })
 
@@ -94,7 +94,7 @@ const getAuthPayload = async (c) => {
   
   const token = auth.split(' ')[1];
   try {
-    const payload = await verify(token, c.env.JWT_SECRET);
+    const payload = await verify(token, c.env.JWT_SECRET, 'HS256');
     return { payload };
   } catch (e) {
     return { error: `Token verification failed: ${e.message}` };
