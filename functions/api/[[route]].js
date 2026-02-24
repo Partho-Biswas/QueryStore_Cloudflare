@@ -5,6 +5,15 @@ import bcrypt from 'bcryptjs'
 
 const app = new Hono().basePath('/api')
 
+// Debug endpoint
+app.get('/debug-env', (c) => {
+  return c.json({
+    has_db: !!c.env.DB,
+    has_jwt_secret: !!c.env.JWT_SECRET,
+    env_keys: Object.keys(c.env || {})
+  });
+})
+
 // --- Auth Endpoints ---
 
 app.post('/signup', async (c) => {
@@ -78,23 +87,23 @@ app.get('/public/queries/:shareId', async (c) => {
 // Middleware-like check for queries
 const getAuthPayload = async (c) => {
   if (!c.env.JWT_SECRET) {
-    console.error('CRITICAL: JWT_SECRET environment variable is missing!');
-    return null;
+    return { error: 'Server configuration error: Missing JWT_SECRET' };
   }
   const auth = c.req.header('Authorization');
-  if (!auth) return null;
+  if (!auth) return { error: 'No Authorization header' };
+  
   const token = auth.split(' ')[1];
   try {
-    return await verify(token, c.env.JWT_SECRET);
+    const payload = await verify(token, c.env.JWT_SECRET);
+    return { payload };
   } catch (e) {
-    console.error('JWT Verification failed:', e.message);
-    return null;
+    return { error: `Token verification failed: ${e.message}` };
   }
 }
 
 app.get('/queries', async (c) => {
-  const payload = await getAuthPayload(c);
-  if (!payload) return c.json({ error: 'Unauthorized' }, 401);
+  const { payload, error } = await getAuthPayload(c);
+  if (error) return c.json({ error }, 401);
   const db = c.env.DB;
 
   const { results: queries } = await db.prepare(`
@@ -116,8 +125,8 @@ app.get('/queries', async (c) => {
 })
 
 app.get('/tags', async (c) => {
-  const payload = await getAuthPayload(c);
-  if (!payload) return c.json({ error: 'Unauthorized' }, 401);
+  const { payload, error } = await getAuthPayload(c);
+  if (error) return c.json({ error }, 401);
   const db = c.env.DB;
 
   const { results: tags } = await db.prepare(`
@@ -132,8 +141,8 @@ app.get('/tags', async (c) => {
 })
 
 app.post('/queries', async (c) => {
-  const payload = await getAuthPayload(c);
-  if (!payload) return c.json({ error: 'Unauthorized' }, 401);
+  const { payload, error } = await getAuthPayload(c);
+  if (error) return c.json({ error }, 401);
   const db = c.env.DB;
   
   const { title, text, tags } = await c.req.json()
@@ -155,8 +164,8 @@ app.post('/queries', async (c) => {
 })
 
 app.delete('/queries/:id', async (c) => {
-  const payload = await getAuthPayload(c);
-  if (!payload) return c.json({ error: 'Unauthorized' }, 401);
+  const { payload, error } = await getAuthPayload(c);
+  if (error) return c.json({ error }, 401);
   const db = c.env.DB;
   const id = c.req.param('id');
 
@@ -172,8 +181,8 @@ app.delete('/queries/:id', async (c) => {
 })
 
 app.put('/queries/:id', async (c) => {
-  const payload = await getAuthPayload(c);
-  if (!payload) return c.json({ error: 'Unauthorized' }, 401);
+  const { payload, error } = await getAuthPayload(c);
+  if (error) return c.json({ error }, 401);
   const db = c.env.DB;
   const id = c.req.param('id');
   const { title, text, tags } = await c.req.json();
@@ -199,8 +208,8 @@ app.put('/queries/:id', async (c) => {
 })
 
 app.post('/queries/:id/share', async (c) => {
-  const payload = await getAuthPayload(c);
-  if (!payload) return c.json({ error: 'Unauthorized' }, 401);
+  const { payload, error } = await getAuthPayload(c);
+  if (error) return c.json({ error }, 401);
   const db = c.env.DB;
   const id = c.req.param('id');
 
