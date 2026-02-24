@@ -1,7 +1,7 @@
-/nbproject/private/
 node_modules/
 .wrangler/
 .env
+.dev.vars
 queries_atlas.json
 users_atlas.json
 migration.sql
