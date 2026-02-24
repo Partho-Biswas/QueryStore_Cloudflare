@@ -77,12 +77,17 @@ app.get('/public/queries/:shareId', async (c) => {
 
 // Middleware-like check for queries
 const getAuthPayload = async (c) => {
+  if (!c.env.JWT_SECRET) {
+    console.error('CRITICAL: JWT_SECRET environment variable is missing!');
+    return null;
+  }
   const auth = c.req.header('Authorization');
   if (!auth) return null;
   const token = auth.split(' ')[1];
   try {
     return await verify(token, c.env.JWT_SECRET);
   } catch (e) {
+    console.error('JWT Verification failed:', e.message);
     return null;
   }
 }
