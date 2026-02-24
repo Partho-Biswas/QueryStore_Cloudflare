@@ -277,13 +277,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     saveQueryButton.addEventListener('click', () => {
-        const id = editQueryIdInput.value;
-        const title = editQueryTitleInput.value.trim();
-        const text = editQueryTextInput.value.trim();
-        const tags = processTags(editQueryTagsInput.value);
-        if (id && title && text) {
-            updateQuery(id, title, text, tags);
+        const isConfirming = saveQueryButton.dataset.confirming === 'true';
+
+        if (isConfirming) {
+            const id = editQueryIdInput.value;
+            const title = editQueryTitleInput.value.trim();
+            const text = editQueryTextInput.value.trim();
+            const tags = processTags(editQueryTagsInput.value);
+            if (id && title && text) {
+                updateQuery(id, title, text, tags);
+            }
+            
+            // Reset button state
+            saveQueryButton.dataset.confirming = 'false';
+            saveQueryButton.textContent = 'Save Changes';
+            saveQueryButton.classList.replace('btn-warning', 'btn-primary');
+
+        } else {
+            // Enter confirmation state
+            saveQueryButton.dataset.confirming = 'true';
+            saveQueryButton.textContent = 'Confirm Update?';
+            saveQueryButton.classList.replace('btn-primary', 'btn-warning');
+
+            // Reset after 3 seconds if not clicked again
+            setTimeout(() => {
+                if (saveQueryButton.dataset.confirming === 'true') {
+                    saveQueryButton.dataset.confirming = 'false';
+                    saveQueryButton.textContent = 'Save Changes';
+                    saveQueryButton.classList.replace('btn-warning', 'btn-primary');
+                }
+            }, 3000);
         }
+    });
+
+    // Also reset if the modal is closed without saving
+    document.getElementById('edit-query-modal').addEventListener('hidden.bs.modal', () => {
+        saveQueryButton.dataset.confirming = 'false';
+        saveQueryButton.textContent = 'Save Changes';
+        saveQueryButton.classList.replace('btn-warning', 'btn-primary');
     });
     
     document.getElementById('edit-query-modal').addEventListener('hidden.bs.modal', () => {
