@@ -168,7 +168,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             queryItem.dataset.id = query._id;
             
             const tagsHtml = (query.tags || []).map(tag => `<span class="badge bg-secondary me-1">${escapeHTML(tag)}</span>`).join('');
-            const dateDisplay = new Date(query.createdAt || query.created_at).toLocaleString();
+            
+            // Handle UTC to Local conversion
+            let dateObj;
+            const rawDate = query.createdAt || query.created_at;
+            if (rawDate) {
+                // If it's a simple SQL string like "2026-02-24 09:37:22", append 'Z' to treat as UTC
+                const dateString = (typeof rawDate === 'string' && !rawDate.endsWith('Z') && !rawDate.includes('+')) 
+                    ? rawDate.replace(' ', 'T') + 'Z' 
+                    : rawDate;
+                dateObj = new Date(dateString);
+            } else {
+                dateObj = new Date();
+            }
+            
+            const dateDisplay = dateObj.toLocaleString();
 
             queryItem.innerHTML = `
                 <div class="d-flex w-100 justify-content-between">
