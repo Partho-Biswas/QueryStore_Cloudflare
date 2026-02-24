@@ -69,7 +69,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             if (!response.ok) throw new Error('Failed to fetch queries.');
-            allQueries = await response.json();
+            const data = await response.json();
+            allQueries = data.map(q => ({ ...q, _id: (q._id || q.id).toString() }));
             renderQueries(allQueries);
         } catch (error) {
             console.error(error.message);
@@ -167,11 +168,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             queryItem.dataset.id = query._id;
             
             const tagsHtml = (query.tags || []).map(tag => `<span class="badge bg-secondary me-1">${escapeHTML(tag)}</span>`).join('');
+            const dateDisplay = new Date(query.createdAt || query.created_at).toLocaleString();
 
             queryItem.innerHTML = `
                 <div class="d-flex w-100 justify-content-between">
                     <h5 class="mb-1">${escapeHTML(query.title)}</h5>
-                    <small>${new Date(query.createdAt).toLocaleString()}</small>
+                    <small>${dateDisplay}</small>
                 </div>
                 <div class="mb-2">${tagsHtml}</div>
                 <div class="query-content mt-2">
@@ -247,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, 2000);
             });
         } else if (target.classList.contains('edit-btn')) {
-            const query = allQueries.find(q => q._id === queryId);
+            const query = allQueries.find(q => q._id.toString() === queryId.toString());
             if (query) {
                 editQueryIdInput.value = query._id;
                 editQueryTitleInput.value = query.title;
@@ -261,33 +263,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     saveQueryButton.addEventListener('click', () => {
-        const isConfirming = saveQueryButton.dataset.confirming === 'true';
-
-        if (isConfirming) {
-            const id = editQueryIdInput.value;
-            const title = editQueryTitleInput.value.trim();
-            const text = editQueryTextInput.value.trim();
-            const tags = processTags(editQueryTagsInput.value);
-            if (id && title && text) {
-                updateQuery(id, title, text, tags);
-            }
-            
-            saveQueryButton.dataset.confirming = 'false';
-            saveQueryButton.textContent = 'Save Changes';
-            saveQueryButton.classList.replace('btn-warning', 'btn-primary');
-
-        } else {
-            saveQueryButton.dataset.confirming = 'true';
-            saveQueryButton.textContent = 'Confirm Update?';
-            saveQueryButton.classList.replace('btn-primary', 'btn-warning');
-
-            setTimeout(() => {
-                if (saveQueryButton.dataset.confirming === 'true') {
-                    saveQueryButton.dataset.confirming = 'false';
-                    saveQueryButton.textContent = 'Save Changes';
-                    saveQueryButton.classList.replace('btn-warning', 'btn-primary');
-                }
-            }, 3000);
+        const id = editQueryIdInput.value;
+        const title = editQueryTitleInput.value.trim();
+        const text = editQueryTextInput.value.trim();
+        const tags = processTags(editQueryTagsInput.value);
+        if (id && title && text) {
+            updateQuery(id, title, text, tags);
         }
     });
     

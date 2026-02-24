@@ -152,6 +152,7 @@ app.post('/queries', async (c) => {
     .run();
   
   const queryId = info.meta.last_row_id;
+  const now = new Date().toISOString();
 
   if (tags && tags.length > 0) {
     const tagValues = tags.map(t => t.trim().toLowerCase()).filter(t => t);
@@ -160,7 +161,7 @@ app.post('/queries', async (c) => {
     }
   }
 
-  return c.json({ _id: queryId, title, text, tags }, 201)
+  return c.json({ _id: queryId, title, text, tags, createdAt: now }, 201)
 })
 
 app.delete('/queries/:id', async (c) => {
