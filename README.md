@@ -1,176 +1,95 @@
-# QueryStore
+# 🗃️ QueryStore
 
-<img width="256" height="256" style="border: 2px solid grey;" alt="image" src="https://cdn-icons-png.flaticon.com/512/1265/1265531.png" />
+QueryStore is a modern, edge-native SQL snippet manager built for speed and simplicity. It allows developers to store, organize, and share their most-used SQL queries in a secure, serverless environment.
 
-QueryStore is a secure and efficient web application designed for developers and data professionals to save, manage, and share text-based queries or code snippets. It provides a personalized workspace to store your frequently used SQL queries, code snippets, or any text-based notes, complete with tagging, search functionality, and secure sharing options.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Cloudflare_Pages-orange.svg)
+![Database](https://img.shields.io/badge/database-Cloudflare_D1-blue.svg)
 
-## Live Demo
-Experience QueryStore live: [https://querystore.onrender.com](https://querystore.onrender.com)
+## 🚀 Features
 
----
+- **Edge-Native Performance**: Powered by Cloudflare Pages and D1 for ultra-low latency worldwide.
+- **Secure Authentication**: JWT-based auth with `bcryptjs` password hashing.
+- **SQL Intelligence**: Built-in syntax highlighting for clear query readability.
+- **Smart Tagging**: Organize your queries with a custom tagging system and instant filtering.
+- **Public Sharing**: Generate unique, secure links to share specific queries with teammates.
+- **Local Timezone Support**: Automatically displays query timestamps in your local time.
+- **Safety First**: Double-confirmation logic for editing sensitive code.
 
-## ✨ Features
+## 🛠️ Tech Stack
 
-*   **User Authentication:** Secure sign-up and login system using JWT (JSON Web Tokens).
-*   **CRUD Operations:** Create, Read, Update, and Delete your personal queries.
-*   **Tagging System:** Organize queries with multiple tags for easy categorization and filtering.
-*   **Full-Text Search:** Quickly find queries by searching their title or content.
-*   **Code Highlighting:** Syntax highlighting for stored queries (using Highlight.js) to improve readability.
-*   **Shareable Links:** Generate unique, public links for individual queries to share them securely.
-*   **Responsive Design:** User-friendly interface built with Bootstrap 5.
+- **Frontend**: Vanilla JavaScript, Bootstrap 5, Highlight.js
+- **Backend**: [Hono](https://hono.dev/) (Web Framework for the Edge)
+- **Runtime**: Cloudflare Pages Functions
+- **Database**: Cloudflare D1 (SQL/SQLite)
+- **Auth**: JSON Web Tokens (JWT)
 
----
-
-## 🚀 Technologies Used
-
-**Frontend:**
-*   **HTML5, CSS3, JavaScript:** Core web technologies.
-*   **Bootstrap 5:** For responsive and modern UI components.
-*   **Highlight.js:** For syntax highlighting of code snippets.
-
-**Backend:**
-*   **Node.js:** JavaScript runtime environment.
-*   **Express.js:** Fast, unopinionated, minimalist web framework for Node.js.
-*   **Mongoose:** MongoDB object data modeling (ODM) for Node.js.
-
-**Database:**
-*   **MongoDB Atlas:** Cloud-hosted NoSQL database.
-
-**Authentication & Security:**
-*   **bcrypt:** For hashing user passwords.
-*   **jsonwebtoken:** For creating and verifying JSON Web Tokens for authentication.
-*   **CORS:** Middleware to enable Cross-Origin Resource Sharing.
-
----
-
-## 📐 Architecture
-
-QueryStore follows a classic client-server architecture:
-
-1.  **Frontend (Client-side):** A single-page application built with plain HTML, CSS, and JavaScript. It communicates with the backend API to perform all operations.
-2.  **Backend (Server-side):** A Node.js Express server that exposes a RESTful API. It handles:
-    *   User authentication (signup, login).
-    *   CRUD operations for queries.
-    *   Interaction with the MongoDB database.
-    *   Token-based authorization for protected routes.
-3.  **Database:** MongoDB Atlas stores user information and query data.
-
----
-
-## 📸 Screenshots
-
-### Login 
-<img width="1080" alt="image" style="border: 2px solid grey;" src="https://github.com/user-attachments/assets/8d1abe20-b7c8-49e4-a89c-24e00eced50f" />
-*(Screenshot of `auth.html (for Login)`)*
-
-### Signup Page
-<img width="1080" alt="image" style="border: 2px solid grey;" src="https://github.com/user-attachments/assets/dd69521a-def0-4e46-ac2c-2731b568051e" />
-*(Screenshot of `auth.html (for Signup)`)*
-
-### Main Dashboard (Query List)
-<img width="1080" alt="image" style="border: 2px solid grey;" src="https://github.com/user-attachments/assets/5d6ab980-b331-443c-95a7-4caf3f5fff31" />
-*(Screenshot of `index.html` showing queries, tags, and search)*
-
-### Edit Query Modal
-<img width="500" alt="image" style="border: 2px solid grey;" src="https://github.com/user-attachments/assets/41d8636c-80e1-4891-9258-96b3ccc25eec" />
-*(Screenshot of the edit modal pop-up)*
-
-### Shareable Query View
-<img width="400" alt="image" style="border: 2px solid grey;" src="https://github.com/user-attachments/assets/13695e39-2911-4a21-b352-1eb9e718bbe4" />
-<img width="1080" alt="image" style="border: 2px solid grey;" src="https://github.com/user-attachments/assets/da8b53b5-abc0-4b2c-9bbd-57dea9426ed9" />
-
-*(Screenshot of `share.html` displaying a public query)*
-
----
-
-## 💻 Local Development Setup
-
-Follow these steps to get QueryStore up and running on your local machine.
+## 💻 Local Development
 
 ### Prerequisites
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-upgrading/) (`npm install -g wrangler`)
 
-*   **Node.js (>=18.0.0):** Download and install from [nodejs.org](https://nodejs.org/).
-*   **A code editor:** (e.g., VS Code).
+### Getting Started
 
-### 1. Clone the Repository
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/YourUsername/QueryStore_Cloudflare.git
+   cd QueryStore_Cloudflare
+   ```
 
-```bash
-git clone https://github.com/Partho-Biswas/QueryStore
-cd QueryStore
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Set up local environment**:
+   Create a `.dev.vars` file in the root directory:
+   ```text
+   JWT_SECRET=your_super_secret_key
+   ```
+
+4. **Initialize Local Database**:
+   ```bash
+   # Run your schema.sql if you have it, or let wrangler create it
+   npx wrangler d1 execute querystore-db --local --file=./schema.sql
+   ```
+
+5. **Run the development server**:
+   ```bash
+   npx wrangler pages dev . --d1 DB
+   ```
+   Visit: `http://localhost:8788`
+
+## 🌐 Deployment
+
+### Automated (GitHub)
+Pushing to the `main` branch automatically triggers a deployment to Cloudflare Pages.
+
+### Manual Configuration
+Ensure the following are set in the Cloudflare Dashboard:
+1. **D1 Binding**: Bind the variable `DB` to your `querystore-db`.
+2. **Environment Variables**: Add `JWT_SECRET` in **Settings > Functions**.
+3. **Compatibility Date**: Set to `2024-01-01` or newer.
+
+## 📂 Project Structure
+
+```text
+├── functions/api/      # Hono API (Cloudflare Functions)
+├── index.html          # Main Dashboard
+├── auth.html           # Login/Signup Page
+├── share.html          # Public Share Page
+├── app.js              # Main Frontend Logic
+├── styles.css          # Custom Styling
+└── wrangler.jsonc      # Cloudflare Configuration
 ```
 
-### 2. Install Dependencies
+## 🔒 Security
 
-In the project root directory, run:
-
-```bash
-npm install
-```
-
-### 3. Set Up MongoDB Atlas
-
-QueryStore requires a MongoDB database. We recommend using [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register) for a free cloud-hosted solution.
-
-1.  **Create an Account:** Sign up for a free account.
-2.  **Create a Free Cluster:** Follow the Atlas UI to create a new "Shared" (M0) cluster.
-3.  **Configure Access:**
-    *   Create a new **Database User** with a strong password.
-    *   Configure **Network Access** to "Allow Access From Anywhere" (`0.0.0.0/0`) for development purposes (be more restrictive in production).
-    *   **Get Connection String:** Obtain your unique connection string (looks like `mongodb+srv://user:<password>@cluster.xxxxx.mongodb.net/...`).
-
-### 4. Configure Environment Variables
-
-Create a file named `.env` in the root of your project directory and add the following:
-
-```env
-MONGO_URI=your_mongodb_atlas_connection_string
-JWT_SECRET=your_secret_jwt_key
-```
-*   Replace `your_mongodb_atlas_connection_string` with the URI obtained from MongoDB Atlas. Remember to substitute `<password>` in the URI with your actual database user password.
-*   Replace `your_secret_jwt_key` with a long, random string. You can generate one using `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
-
-**Important:** Ensure `.env` is included in your `.gitignore` to prevent sensitive information from being committed to version control.
+QueryStore takes security seriously:
+- Passwords are never stored in plain text (salted and hashed).
+- Environment variables are managed securely via Cloudflare Secrets.
+- JWT tokens are signed with the `HS256` algorithm.
 
 ---
-
-## ▶️ Running the Application
-
-### 1. Start the Backend Server
-
-Open a terminal in the project root and run:
-
-```bash
-npm start
-# or node server.js
-```
-You should see console messages indicating the server is running on `http://localhost:3000` and connected to MongoDB Atlas.
-
-### 2. Launch the Frontend
-
-Open `auth.html` or `index.html` directly in your web browser. The frontend will communicate with your local backend server.
-
----
-
-## 🧪 Testing
-
-The project includes unit tests for the backend. To run them:
-
-```bash
-npm test
-```
-
----
-
-## ☁️ Deployment Notes
-
-This is a full-stack application and requires a hosting environment that supports Node.js. An example deployment can be found on Render: [https://querystore.onrender.com](https://querystore.onrender.com). It cannot be deployed on static-only hosts like GitHub Pages. When deploying, ensure your `MONGO_URI` and `JWT_SECRET` environment variables are securely configured in your hosting service's dashboard.
-
----
-
-## 📄 License
-
-This project is licensed under the ISC License. See the `LICENSE` file for details.
-
----
-
-## © Copyright 2026 "Partho Biswas"
+Built with ❤️ using Cloudflare Workers and Hono.
